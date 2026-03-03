@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: report-service-test
+  main:
+    allow-bean-definition-overriding: true
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  h2:
+    console:
+      enabled: false
+  flyway:
+    enabled: false
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration
+
+server:
+  port: 0
+
+rabbitmq:
+  exchange:
+    name: test.order.exchange
+  queue:
+    name: test.order.placed.report.queue
+    order-ready:
+      name: test.order.ready.report.queue
+  routing-key:
+    order-placed: order.placed
+    order-ready: order.ready
+  dlq:
+    name: test.order.report.dlq
+    exchange: test.order.report.dlx
+
+CORS_ALLOWED_ORIGIN_PATTERNS: "*"
