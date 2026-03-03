@@ -358,7 +358,7 @@ Las Historias de Usuario refinadas cumplen con **todos los principios INVEST** d
 
 2. **HU #5 - Filtrado de Pedidos:** Historia valiosa para la gestión operativa que permite al personal filtrar pedidos por estado. Cumple todos los principios INVEST con mejoras en case-sensitivity, ordenamiento y exclusión de eliminados.
 
-3. **HU #6 - Actualizaciones de Estado de Pedidos:** Historia crítica para la gestión del flujo de trabajo que permite actualizaciones manuales controladas. Cumple todos los principios INVEST con mejoras significativas en seguridad (JWT, roles), auditoría completa, reglas de transición explícitas y publicación de eventos.
+3. **HU #6 - Actualizaciones de Estado de Pedidos:** Historia crítica para la gestión del flujo de trabajo que permite actualizaciones manuales controladas. Cumple todos los principios INVEST con mejoras significativas en seguridad (JWT, roles), reglas de transición explícitas y publicación de eventos.
 
 ### Comparativa de Complejidad
 
