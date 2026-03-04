@@ -1,6 +1,8 @@
 package com.restaurant.orderservice.exception;
 
 import com.restaurant.orderservice.dto.ErrorResponse;
+import org.springframework.beans.TypeMismatchException;
+import org.springframework.core.convert.ConversionFailedException;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -239,15 +241,44 @@ public class GlobalExceptionHandler {
      */
     /**
      * Handles HttpMessageNotReadableException.
-     * Returns 400 Bad Request when the request body is malformed.
+     * Returns 400 Bad Request when the request body is malformed or contains invalid values.
+     * Provides descriptive message for case-sensitive enum values like OrderStatus.
+     *
+     * Validates Requirements: HU5 - Criterio 3 (case-sensitive), Criterio 4 (mensaje descriptivo)
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleMalformedJson(HttpMessageNotReadableException ex) {
+        String message = "Malformed request body";
+        
+        // Check if the root cause is an InvalidFormatException (e.g., enum conversion failure)
+        Throwable cause = ex.getCause();
+        if (cause instanceof com.fasterxml.jackson.databind.exc.InvalidFormatException invalidFormatEx) {
+            // If the target type is an enum, provide a descriptive message
+            Class<?> targetType = invalidFormatEx.getTargetType();
+            if (targetType != null && targetType.isEnum()) {
+                Object[] enumConstants = targetType.getEnumConstants();
+                String validValues = java.util.Arrays.stream(enumConstants)
+                        .map(Object::toString)
+                        .collect(java.util.stream.Collectors.joining(", "));
+                
+                String fieldName = invalidFormatEx.getPath().stream()
+                        .map(com.fasterxml.jackson.databind.JsonMappingException.Reference::getFieldName)
+                        .filter(java.util.Objects::nonNull)
+                        .collect(java.util.stream.Collectors.joining("."));
+                
+                message = String.format(
+                        "Invalid value '%s' for field '%s'. The values are case-sensitive and must be one of: %s",
+                        invalidFormatEx.getValue(), 
+                        fieldName.isEmpty() ? "status" : fieldName, 
+                        validValues);
+            }
+        }
+        
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error("Bad Request")
-                .message("Malformed request body")
+                .message(message)
                 .build();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
@@ -255,14 +286,98 @@ public class GlobalExceptionHandler {
     /**
      * Handles MethodArgumentTypeMismatchException.
      * Returns 400 Bad Request when path variable or param type conversion fails.
+     * Provides descriptive message for case-sensitive enum values like OrderStatus.
+     *
+     * Validates Requirements: HU5 - Criterio 3 (case-sensitive), Criterio 4 (mensaje descriptivo)
      */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        String message;
+        Class<?> requiredType = ex.getRequiredType();
+        if (requiredType != null && requiredType.isEnum()) {
+            Object[] enumConstants = requiredType.getEnumConstants();
+            String validValues = java.util.Arrays.stream(enumConstants)
+                    .map(Object::toString)
+                    .collect(java.util.stream.Collectors.joining(", "));
+            message = String.format(
+                    "Invalid value '%s' for parameter '%s'. The values are case-sensitive and must be one of: %s",
+                    ex.getValue(), ex.getName(), validValues);
+        } else {
+            message = "Invalid parameter: " + ex.getName();
+        }
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error("Bad Request")
-                .message("Invalid parameter: " + ex.getName())
+                .message(message)
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    /**
+     * Handles ConversionFailedException.
+     * Returns 400 Bad Request when Spring ConversionService fails to convert a value.
+     * This typically occurs with query parameters that use custom converters or type conversion.
+     * Provides descriptive message for case-sensitive enum values.
+     *
+     * Validates Requirements: HU5 - Criterio 3 (case-sensitive), Criterio 4 (mensaje descriptivo)
+     */
+    @ExceptionHandler(ConversionFailedException.class)
+    public ResponseEntity<ErrorResponse> handleConversionFailed(ConversionFailedException ex) {
+        String message;
+        Class<?> targetType = ex.getTargetType().getType();
+        
+        if (targetType.isEnum()) {
+            Object[] enumConstants = targetType.getEnumConstants();
+            String validValues = java.util.Arrays.stream(enumConstants)
+                    .map(Object::toString)
+                    .collect(java.util.stream.Collectors.joining(", "));
+            message = String.format(
+                    "Invalid value '%s' for parameter. The values are case-sensitive and must be one of: %s",
+                    ex.getValue(), validValues);
+        } else {
+            message = "Invalid parameter value: " + ex.getValue();
+        }
+        
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Bad Request")
+                .message(message)
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    /**
+     * Handles TypeMismatchException (parent class).
+     * Fallback handler for type conversion errors not caught by more specific handlers.
+     * Provides descriptive message for case-sensitive enum values.
+     *
+     * Validates Requirements: HU5 - Criterio 3 (case-sensitive), Criterio 4 (mensaje descriptivo)
+     */
+    @ExceptionHandler(TypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatchGeneric(TypeMismatchException ex) {
+        String message;
+        Class<?> requiredType = ex.getRequiredType();
+        
+        if (requiredType != null && requiredType.isEnum()) {
+            Object[] enumConstants = requiredType.getEnumConstants();
+            String validValues = java.util.Arrays.stream(enumConstants)
+                    .map(Object::toString)
+                    .collect(java.util.stream.Collectors.joining(", "));
+                    
+            message = String.format(
+                    "Invalid value '%s' for parameter. The values are case-sensitive and must be one of: %s",
+                    ex.getValue(), validValues);
+        } else {
+            message = "Type mismatch: cannot convert value to required type";
+        }
+        
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Bad Request")
+                .message(message)
                 .build();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }

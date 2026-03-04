@@ -16,6 +16,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doReturn;
 
 /**
  * Unit tests for GlobalExceptionHandler.
@@ -211,5 +212,160 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getBody().getError()).isEqualTo("Internal Server Error");
         assertThat(response.getBody().getMessage()).isEqualTo("An unexpected error occurred");
         assertThat(response.getBody().getTimestamp()).isNotNull();
+    }
+
+    /**
+     * Test: MethodArgumentTypeMismatchException for enum types returns descriptive case-sensitive message
+     * 
+     * Validates HU5 Criterio 3: case-sensitive status values
+     */
+    @Test
+    void handleTypeMismatch_WithEnumType_ReturnsDescriptiveCaseSensitiveMessage() {
+        // Arrange - simulate sending "pending" (lowercase) for an OrderStatus parameter
+        org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex =
+                new org.springframework.web.method.annotation.MethodArgumentTypeMismatchException(
+                        "pending",
+                        com.restaurant.orderservice.enums.OrderStatus.class,
+                        "status",
+                        null,
+                        new IllegalArgumentException("No enum constant"));
+
+        // Act
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleTypeMismatch(ex);
+
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getStatus()).isEqualTo(400);
+        assertThat(response.getBody().getError()).isEqualTo("Bad Request");
+        assertThat(response.getBody().getMessage()).contains("case-sensitive");
+        assertThat(response.getBody().getMessage()).contains("pending");
+        assertThat(response.getBody().getMessage()).contains("PENDING");
+        assertThat(response.getBody().getMessage()).contains("IN_PREPARATION");
+        assertThat(response.getBody().getMessage()).contains("READY");
+    }
+
+    /**
+     * Test: MethodArgumentTypeMismatchException for non-enum types returns generic message
+     */
+    @Test
+    void handleTypeMismatch_WithNonEnumType_ReturnsGenericMessage() {
+        org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex =
+                new org.springframework.web.method.annotation.MethodArgumentTypeMismatchException(
+                        "not-a-uuid",
+                        java.util.UUID.class,
+                        "id",
+                        null,
+                        new IllegalArgumentException("Invalid UUID"));
+
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleTypeMismatch(ex);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getMessage()).isEqualTo("Invalid parameter: id");
+    }
+
+    /**
+     * Test: HttpMessageNotReadableException with enum InvalidFormatException returns descriptive message
+     * 
+     * Validates HU5 Criterio 3: case-sensitive status values in JSON body
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void handleMalformedJson_WithInvalidEnumInBody_ReturnsDescriptiveCaseSensitiveMessage() {
+        // Arrange - use mocking to simulate complex Jackson exception structure
+        com.fasterxml.jackson.databind.exc.InvalidFormatException invalidFormatEx = mock(
+                com.fasterxml.jackson.databind.exc.InvalidFormatException.class);
+        
+        doReturn(com.restaurant.orderservice.enums.OrderStatus.class).when(invalidFormatEx).getTargetType();
+        when(invalidFormatEx.getValue()).thenReturn("in_preparation");
+        
+        com.fasterxml.jackson.databind.JsonMappingException.Reference ref = 
+                new com.fasterxml.jackson.databind.JsonMappingException.Reference(null, "status");
+        when(invalidFormatEx.getPath()).thenReturn(java.util.Collections.singletonList(ref));
+        
+        org.springframework.http.converter.HttpMessageNotReadableException ex =
+                new org.springframework.http.converter.HttpMessageNotReadableException(
+                        "JSON parse error", invalidFormatEx, (org.springframework.http.HttpInputMessage) null);
+
+        // Act
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleMalformedJson(ex);
+
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getStatus()).isEqualTo(400);
+        assertThat(response.getBody().getError()).isEqualTo("Bad Request");
+        assertThat(response.getBody().getMessage()).contains("case-sensitive");
+        assertThat(response.getBody().getMessage()).contains("in_preparation");
+        assertThat(response.getBody().getMessage()).contains("status");
+        assertThat(response.getBody().getMessage()).contains("PENDING");
+        assertThat(response.getBody().getMessage()).contains("IN_PREPARATION");
+        assertThat(response.getBody().getMessage()).contains("READY");
+    }
+
+    /**
+     * Test: HttpMessageNotReadableException with generic parsing error returns generic message
+     */
+    @Test
+    void handleMalformedJson_WithGenericParsingError_ReturnsGenericMessage() {
+        org.springframework.http.converter.HttpMessageNotReadableException ex =
+                new org.springframework.http.converter.HttpMessageNotReadableException(
+                        "Malformed JSON", (org.springframework.http.HttpInputMessage) null);
+
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleMalformedJson(ex);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getMessage()).isEqualTo("Malformed request body");
+    }
+
+    /**
+     * Test: ConversionFailedException with enum returns descriptive case-sensitive message
+     * This exception is thrown when Spring ConversionService fails (e.g., query params)
+     */
+    @Test
+    void handleConversionFailed_WithEnumType_ReturnsDescriptiveCaseSensitiveMessage() {
+        org.springframework.core.convert.TypeDescriptor sourceType = 
+                org.springframework.core.convert.TypeDescriptor.valueOf(String.class);
+        org.springframework.core.convert.TypeDescriptor targetType = 
+                org.springframework.core.convert.TypeDescriptor.valueOf(com.restaurant.orderservice.enums.OrderStatus.class);
+        
+        org.springframework.core.convert.ConversionFailedException ex =
+                new org.springframework.core.convert.ConversionFailedException(
+                        sourceType, targetType, "pending", 
+                        new IllegalArgumentException("No enum constant"));
+
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleConversionFailed(ex);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getStatus()).isEqualTo(400);
+        assertThat(response.getBody().getError()).isEqualTo("Bad Request");
+        assertThat(response.getBody().getMessage()).contains("case-sensitive");
+        assertThat(response.getBody().getMessage()).contains("pending");
+        assertThat(response.getBody().getMessage()).contains("PENDING");
+        assertThat(response.getBody().getMessage()).contains("IN_PREPARATION");
+        assertThat(response.getBody().getMessage()).contains("READY");
+    }
+
+    /**
+     * Test: TypeMismatchException with enum returns descriptive message (fallback handler)
+     */
+    @Test
+    void handleTypeMismatchGeneric_WithEnumType_ReturnsDescriptiveMessage() {
+        org.springframework.beans.TypeMismatchException ex = 
+                new org.springframework.beans.TypeMismatchException("ready", 
+                        com.restaurant.orderservice.enums.OrderStatus.class);
+
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleTypeMismatchGeneric(ex);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getMessage()).contains("case-sensitive");
+        assertThat(response.getBody().getMessage()).contains("ready");
+        assertThat(response.getBody().getMessage()).contains("PENDING");
+        assertThat(response.getBody().getMessage()).contains("IN_PREPARATION");
+        assertThat(response.getBody().getMessage()).contains("READY");
     }
 }

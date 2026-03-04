@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -21,11 +22,15 @@ import java.util.UUID;
  * Soft Delete:
  * Orders are never physically deleted. Instead, they are marked as deleted
  * with a timestamp for audit purposes (Copilot Instructions Section 4).
+ * The @SQLRestriction annotation ensures that deleted orders are automatically
+ * excluded from all standard JPA queries (findAll, findById, etc.).
  * 
  * Validates Requirements: 2.3, 2.4, 2.5, 9.1
+ * Validates Requirements: HU5 - Criterio 6 (Exclusión de Pedidos Eliminados)
  */
 @Entity
 @Table(name = "orders")
+@SQLRestriction("deleted = false")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

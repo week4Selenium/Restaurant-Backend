@@ -59,10 +59,13 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     /**
      * Finds all active (non-deleted) orders.
      * Excludes orders marked as soft-deleted.
+     * Results are ordered by createdAt descending (most recent first).
      * 
-     * @return List of active orders
+     * Validates Requirements: HU5 - Criterio 5 (orden descendente por fecha de creación)
+     * 
+     * @return List of active orders ordered by createdAt DESC
      */
-    @Query("SELECT o FROM Order o WHERE o.deleted = false")
+    @Query("SELECT o FROM Order o WHERE o.deleted = false ORDER BY o.createdAt DESC")
     List<Order> findAllActive();
     
     /**
@@ -78,21 +81,27 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     /**
      * Finds all active orders with the specified status.
      * Excludes soft-deleted orders.
+     * Results are ordered by createdAt descending (most recent first).
+     * 
+     * Validates Requirements: HU5 - Criterio 5 (orden descendente por fecha de creación)
      * 
      * @param status Order status to filter by
-     * @return List of active orders with the specified status
+     * @return List of active orders with the specified status ordered by createdAt DESC
      */
-    @Query("SELECT o FROM Order o WHERE o.status = :status AND o.deleted = false")
+    @Query("SELECT o FROM Order o WHERE o.status = :status AND o.deleted = false ORDER BY o.createdAt DESC")
     List<Order> findByStatusActive(OrderStatus status);
     
     /**
      * Finds all active orders with any of the specified statuses.
      * Excludes soft-deleted orders.
+     * Results are ordered by createdAt descending (most recent first).
+     * 
+     * Validates Requirements: HU5 - Criterio 5 (orden descendente por fecha de creación)
      * 
      * @param statuses List of order statuses to include
-     * @return List of active orders matching any of the specified statuses
+     * @return List of active orders matching any of the specified statuses ordered by createdAt DESC
      */
-    @Query("SELECT o FROM Order o WHERE o.status IN :statuses AND o.deleted = false")
+    @Query("SELECT o FROM Order o WHERE o.status IN :statuses AND o.deleted = false ORDER BY o.createdAt DESC")
     List<Order> findByStatusInActive(List<OrderStatus> statuses);
     
     /**
