@@ -37,32 +37,32 @@ graph LR
 ### 1. Clonar ambos repositorios en una carpeta comun
 
 ```bash
-mkdir Sistemas-de-pedidos-restaurante && cd Sistemas-de-pedidos-restaurante
+mkdir restaurant-system && cd restaurant-system
 
-git clone <url-backend> Sistemas-de-pedidos-restaurante-backend
-git clone <url-frontend> Sistemas-de-pedidos-restaurante-frontend
+git clone https://github.com/week4Selenium/Restaurant-Backend.git
+git clone https://github.com/week4Selenium/Restaurant-FrontEnd.git
 ```
 
 Resultado esperado:
 
 ```
-Sistemas-de-pedidos-restaurante/          # carpeta raiz
+restaurant-system/                        # carpeta raiz
 ├── docker-compose.yml                    # orquestacion de servicios
 ├── docker-compose.dev.yml                # override para hot-reload (opcional)
 ├── .env                                  # variables de entorno
-├── Sistemas-de-pedidos-restaurante-backend/
+├── Restaurant-Backend/
 │   ├── order-service/
 │   ├── kitchen-worker/
 │   ├── report-service/
 │   └── pom.xml
-└── Sistemas-de-pedidos-restaurante-frontend/
+└── Restaurant-FrontEnd/
     ├── src/
     └── package.json
 ```
 
 ### 2. Crear el archivo `.env` en la carpeta raiz
 
-Crear el archivo `Sistemas-de-pedidos-restaurante/.env` con el siguiente contenido:
+Crear el archivo `restaurant-system/.env` con el siguiente contenido:
 
 ```dotenv
 # ========================================
@@ -221,9 +221,9 @@ services:
 
   order-service:
     <<: *common-config
-    image: ghcr.io/maese-alfred/sistemas-de-pedidos-restaurante/order-service:latest
+    image: ghcr.io/week4selenium/restaurant-backend/order-service:latest
     build:
-      context: ./Sistemas-de-pedidos-restaurante-backend
+      context: ./Restaurant-Backend
       dockerfile: order-service/Dockerfile
     container_name: restaurant-order-service
     ports:
@@ -236,9 +236,9 @@ services:
 
   kitchen-worker:
     <<: *common-config
-    image: ghcr.io/maese-alfred/sistemas-de-pedidos-restaurante/kitchen-worker:latest
+    image: ghcr.io/week4selenium/restaurant-backend/kitchen-worker:latest
     build:
-      context: ./Sistemas-de-pedidos-restaurante-backend
+      context: ./Restaurant-Backend
       dockerfile: kitchen-worker/Dockerfile
     container_name: restaurant-kitchen-worker
     ports:
@@ -251,9 +251,9 @@ services:
 
   report-service:
     <<: *common-config
-    image: ghcr.io/maese-alfred/sistemas-de-pedidos-restaurante/report-service:latest
+    image: ghcr.io/week4selenium/restaurant-backend/report-service:latest
     build:
-      context: ./Sistemas-de-pedidos-restaurante-backend
+      context: ./Restaurant-Backend
       dockerfile: report-service/Dockerfile
     container_name: restaurant-report-service
     ports:
@@ -266,9 +266,9 @@ services:
 
   frontend:
     <<: *common-config
-    image: ghcr.io/maese-alfred/sistemas-de-pedidos-restaurante/frontend:latest
+    image: ghcr.io/week4selenium/restaurant-frontend:latest
     build:
-      context: ./Sistemas-de-pedidos-restaurante-frontend
+      context: ./Restaurant-FrontEnd
       dockerfile: Dockerfile.frontend
     container_name: restaurant-frontend
     ports:
@@ -292,7 +292,7 @@ networks:
 ### 4. Iniciar el stack
 
 ```bash
-cd Sistemas-de-pedidos-restaurante
+cd restaurant-system
 
 # Construir y levantar todos los servicios
 docker compose up --build -d
@@ -359,7 +359,7 @@ curl "http://localhost:8080/orders?status=PENDING,IN_PREPARATION,READY" \
 ## Estructura del repositorio
 
 ```
-Sistemas-de-pedidos-restaurante-backend/
+Restaurant-Backend/
 ├── order-service/               # API REST + publicacion de eventos
 │   ├── src/main/java/.../
 │   │   ├── controller/          # Endpoints HTTP
@@ -407,7 +407,7 @@ Sistemas-de-pedidos-restaurante-backend/
 Requiere Java 17 y Maven 3.9+:
 
 ```bash
-cd Sistemas-de-pedidos-restaurante-backend
+cd Restaurant-Backend
 
 # Compilar todo
 mvn clean compile
